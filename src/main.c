@@ -4,25 +4,66 @@
 
 // string helpers
 int string_length(char* string);
-// filesystem stuff
+// system stuff
 char* get_file_content(char* path);
 int is_file(char* possible_path);
+int is_pipe();
 // actual functionality
+void output(char character);
 int output_string_with_newlines(char* string);
-int do_the_thing(char* content);
+int output_pipe_with_newlines();
+int argument_data(char* content);
 
 
 
 int main(int argc, char* argv[]) {
-	if (argc < 2) {
-		printf("lnl: No file/string provided\n");
+	if (argc >= 2) {
+		return argument_data(argv[1]);
+	}
+
+	return output_pipe_with_newlines();
+}
+
+
+
+int is_pipe() {
+	struct stat stdin_stat;
+	fstat(fileno(stdin), &stdin_stat);
+	return S_ISFIFO(stdin_stat.st_mode);
+}
+
+int output_pipe_with_newlines() {
+	char character;
+	int i = 0;
+
+	if (!is_pipe()) {
+		printf("lnl: Nothing provided\n");
 		return -1;
 	}
 
-	return do_the_thing(argv[1]);
+	while ((character = getchar()) != EOF) {
+		output(character);
+		i++;
+	}
+
+	if (i == 0) {
+		printf("lnl: Nothing provided to pipe\n");
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
-int do_the_thing(char* content) {
+void output(char character) {
+	if (character != '\n') {
+		printf("%c", character);
+		return;
+	}
+
+	printf("\x1b[31m" "\\n" "\x1b[0m" "\n");
+}
+
+int argument_data(char* content) {
 	int is_mallocd = 0;
 
 	if (is_file(content)) {
@@ -71,18 +112,11 @@ int string_length(char* string) {
 
 int output_string_with_newlines(char* string) {
 	int str_length = string_length(string);
-	char character;
 
 	for (int i = 0; i < str_length; i++) {
-		if ((character = string[i]) != '\n') {
-			printf("%c", character);
-			continue;
-		}
-
-		printf("\x1b[31m" "\\n" "\x1b[0m" "\n");
+		output(string[i]);
 	}
 
-	printf("\n");
 	return 0;
 }
 
